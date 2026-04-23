@@ -1,7 +1,6 @@
 import { cache } from "react";
 import { createClient, groq } from "next-sanity";
 
-import { getMockPostBySlug, getMockPreviews } from "@/lib/mock-data";
 import type { BlogPost, PostPreview } from "@/lib/types";
 
 const apiVersion = "2024-01-01";
