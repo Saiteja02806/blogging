@@ -9,8 +9,19 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        background: "var(--background)",
-        foreground: "var(--foreground)",
+        background: "var(--bg-primary)",
+        foreground: "var(--text-primary)",
+        border: "var(--border-light)",
+      },
+      fontFamily: {
+        display: ["var(--font-display)"],
+        body: ["var(--font-body)"],
+        ui: ["var(--font-ui)"],
+        mono: ["var(--font-mono)"],
+      },
+      boxShadow: {
+        editorial: "0 28px 72px rgba(0, 0, 0, 0.38)",
+        soft: "0 16px 40px rgba(0, 0, 0, 0.26)",
       },
     },
   },

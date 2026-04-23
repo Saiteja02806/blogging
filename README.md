@@ -1,36 +1,78 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Personal Blog Platform
 
-## Getting Started
+An editorial-style personal blog built with Next.js 14, Tailwind CSS, and Sanity.
 
-First, run the development server:
+## Stack
+
+- Next.js 14 App Router
+- Tailwind CSS
+- Sanity CMS with Portable Text
+- `next/image` for optimized editorial imagery
+
+## Local Development
+
+Install dependencies:
+
+```bash
+npm install
+```
+
+Run the app:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Run the Sanity Studio:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npm run studio
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Environment Variables
 
-## Learn More
+Copy `.env.example` and fill in your Sanity project values:
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+NEXT_PUBLIC_SANITY_PROJECT_ID=
+NEXT_PUBLIC_SANITY_DATASET=production
+SANITY_API_TOKEN=
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+If those values are missing, the frontend falls back to local mock posts so the UI still renders and builds cleanly.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Project Structure
 
-## Deploy on Vercel
+```text
+src/
+  app/
+    page.tsx
+    about/page.tsx
+    blog/[slug]/page.tsx
+  components/
+    Footer.tsx
+    HomePostCollection.tsx
+    Navbar.tsx
+    PortableTextBody.tsx
+    PostCard.tsx
+    PostHeader.tsx
+  lib/
+    image.ts
+    mock-data.ts
+    sanity.ts
+    site.ts
+sanity/
+  schemas/
+    post.ts
+sanity.config.ts
+sanity.cli.ts
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Verification
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+npm run lint
+npm run build
+```
+
+Both commands pass in the current workspace.
