@@ -7,6 +7,7 @@ import {
 } from "next/font/google";
 import type { ReactNode } from "react";
 
+import { Analytics } from "@vercel/analytics/react";
 import { Footer } from "@/components/Footer";
 import { Navbar } from "@/components/Navbar";
 import { siteConfig } from "@/lib/site";
@@ -78,6 +79,7 @@ export default function RootLayout({
           {children}
           <Footer />
         </div>
+        <Analytics />
       </body>
     </html>
   );
