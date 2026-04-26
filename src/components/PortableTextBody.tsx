@@ -75,14 +75,14 @@ const components: PortableTextComponents = {
       }
 
       return (
-        <figure className="my-10 mx-auto max-w-[700px] overflow-hidden rounded-lg border border-[var(--border-light)]">
-          <div className="relative bg-[var(--bg-secondary)]">
+        <figure className="my-8 mx-auto max-w-[420px] overflow-hidden rounded-lg border border-[var(--border-light)]">
+          <div className="relative bg-[var(--bg-secondary)] p-3">
             <Image
               src={src}
               alt={typeof value.alt === "string" ? value.alt : ""}
-              width={700}
-              height={394}
-              className="h-auto w-full object-contain"
+              width={400}
+              height={225}
+              className="h-auto w-full object-contain rounded-md"
             />
           </div>
           {typeof value.caption === "string" && value.caption ? (
