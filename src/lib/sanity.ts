@@ -1,6 +1,7 @@
 import { cache } from "react";
 import { createClient, groq } from "next-sanity";
 
+import { getMockPostBySlug, getMockPreviews } from "@/lib/mock-data";
 import type { BlogPost, PostPreview } from "@/lib/types";
 
 const apiVersion = "2024-01-01";
@@ -60,7 +61,7 @@ const allSlugsQuery = groq`
 
 export const getAllPosts = cache(async (): Promise<PostPreview[]> => {
   if (!isSanityConfigured) {
-    return [];
+    return getMockPreviews();
   }
 
   try {
@@ -70,13 +71,13 @@ export const getAllPosts = cache(async (): Promise<PostPreview[]> => {
       { next: { revalidate } },
     );
   } catch {
-    return [];
+    return getMockPreviews();
   }
 });
 
 export const getAllPostSlugs = cache(async (): Promise<string[]> => {
   if (!isSanityConfigured) {
-    return [];
+    return getMockPreviews().map((post) => post.slug.current);
   }
 
   try {
@@ -88,14 +89,14 @@ export const getAllPostSlugs = cache(async (): Promise<string[]> => {
 
     return rows.map((row) => row.slug);
   } catch {
-    return [];
+    return getMockPreviews().map((post) => post.slug.current);
   }
 });
 
 export const getPostBySlug = cache(
   async (slug: string): Promise<BlogPost | null> => {
     if (!isSanityConfigured) {
-      return null;
+      return getMockPostBySlug(slug);
     }
 
     try {
@@ -105,9 +106,9 @@ export const getPostBySlug = cache(
         { next: { revalidate } },
       );
 
-      return post ?? null;
+      return post ?? getMockPostBySlug(slug);
     } catch {
-      return null;
+      return getMockPostBySlug(slug);
     }
   },
 );
