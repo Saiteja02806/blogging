@@ -90,6 +90,8 @@ export default async function BlogPostPage({
             category={post.category}
             publishedAt={post.publishedAt}
             readTime={post.readTime}
+            authorName={siteConfig.author.name}
+            authorImage={siteConfig.author.image}
           />
         </section>
 
