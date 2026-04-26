@@ -62,16 +62,36 @@ function postImage(
 const mockPostsInternal: BlogPost[] = [
   {
     _id: "duolingo-onboarding-analysis",
-    title: "Duolingo Has 39 Onboarding Screens. Most People Complete Every Single One.",
+    title: "Every App That Converts Follows This 4-Step Cycle. Most Founders Have Never Heard of It.",
     slug: { current: "duolingo-onboarding-analysis" },
     publishedAt: "2026-04-26T09:00:00.000Z",
     excerpt:
-      "Downloaded Duolingo last month just to study their onboarding. Not to learn Spanish. Not to streak. To reverse-engineer why 500 million people sit through 39 screens and call it fun.",
-    readTime: 8,
+      "Spent the last 3 weeks studying onboarding flows of the top 10 consumer apps. Not as a user. As a builder trying to steal every trick they use. Every app that converts follows the same cycle.",
+    readTime: 10,
     category: "Product Analysis",
-    coverImage: "/duolingo-1.png",
-    coverImageAlt: "Duolingo onboarding screen analysis",
+    coverImage: "/post-cover-editorial-4step.png",
+    coverImageAlt: "4-step conversion cycle: Signup, Setup, Aha Moment, Habit",
     body: [
+      paragraph(
+        "Spent the last 3 weeks studying onboarding flows of the top 10 consumer apps.
+        Not as a user. As a builder trying to steal every trick they use.",
+      ),
+      paragraph(
+        "Every app that converts — not just acquires, but actually converts — follows the same cycle.",
+      ),
+      paragraph(
+        "Signup → Setup → Aha Moment → Habit.",
+      ),
+      paragraph(
+        "In that order. Every time. No shortcuts.",
+      ),
+      paragraph(
+        "Most founders build 1 of the 4 steps and call it onboarding. Then they wonder why nobody pays.",
+      ),
+      paragraph(
+        "Let me break down what each step actually means. And then I will show you how Duolingo — one of the most studied onboarding flows in consumer software — executes all 4 with 39 screens nobody wants to skip.",
+      ),
+      heading("Duolingo: The Case Study", "h2"),
       paragraph(
         "Downloaded Duolingo last month just to study their onboarding. Not to learn Spanish. Not to streak. To reverse-engineer why 500 million people sit through 39 screens and call it fun. Here is what I found.",
       ),

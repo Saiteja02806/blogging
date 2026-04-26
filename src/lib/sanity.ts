@@ -65,11 +65,13 @@ export const getAllPosts = cache(async (): Promise<PostPreview[]> => {
   }
 
   try {
-    return await client.fetch<PostPreview[]>(
+    const posts = await client.fetch<PostPreview[]>(
       allPostsQuery,
       {},
       { next: { revalidate } },
     );
+    // Fall back to mock data if Sanity returns no posts
+    return posts.length > 0 ? posts : getMockPreviews();
   } catch {
     return getMockPreviews();
   }
@@ -87,7 +89,9 @@ export const getAllPostSlugs = cache(async (): Promise<string[]> => {
       { next: { revalidate } },
     );
 
-    return rows.map((row) => row.slug);
+    const slugs = rows.map((row) => row.slug);
+    // Fall back to mock slugs if Sanity returns no posts
+    return slugs.length > 0 ? slugs : getMockPreviews().map((post) => post.slug.current);
   } catch {
     return getMockPreviews().map((post) => post.slug.current);
   }
