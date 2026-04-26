@@ -1,6 +1,6 @@
 import Image from "next/image";
 
-import { formatLongDate } from "@/lib/utils";
+import { formatPostHeaderDate } from "@/lib/utils";
 
 interface PostHeaderProps {
   title: string;
@@ -32,27 +32,31 @@ export function PostHeader({
           {title}
         </h1>
 
-        <div className="flex items-center gap-4">
-          {authorImage && (
-            <div className="h-10 w-10 overflow-hidden rounded-full border border-[var(--border-light)]">
+        <div className="flex items-center gap-3.5">
+          {authorImage ? (
+            <div className="relative h-12 w-12 flex-shrink-0 overflow-hidden rounded-full border border-[var(--border-light)] ring-1 ring-inset ring-white/5">
               <Image
                 src={authorImage}
                 alt={authorName || "Author"}
-                width={40}
-                height={40}
+                width={48}
+                height={48}
                 className="h-full w-full object-cover"
+                sizes="48px"
+                priority
               />
             </div>
-          )}
-          <div className="flex flex-col gap-0.5">
-            {authorName && (
-              <span className="font-ui text-sm font-semibold uppercase tracking-wide text-[var(--text-primary)]">
+          ) : null}
+          <div className="flex min-w-0 flex-col justify-center gap-0.5">
+            {authorName ? (
+              <span className="font-ui text-[0.8125rem] font-bold uppercase leading-tight tracking-[0.1em] text-[var(--text-primary)]">
                 {authorName}
               </span>
-            )}
-            <div className="flex items-center gap-2 font-ui text-[0.8rem] text-[var(--text-tertiary)]">
-              <time dateTime={publishedAt}>{formatLongDate(publishedAt)}</time>
-              <span>·</span>
+            ) : null}
+            <div className="flex flex-wrap items-center gap-x-1.5 font-ui text-[0.7rem] font-medium uppercase leading-tight tracking-[0.06em] text-[var(--text-tertiary)]">
+              <time dateTime={publishedAt}>{formatPostHeaderDate(publishedAt)}</time>
+              <span className="text-[var(--text-tertiary)]/80" aria-hidden>
+                ·
+              </span>
               <span>{readTime} min read</span>
             </div>
           </div>

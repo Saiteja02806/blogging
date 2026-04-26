@@ -20,6 +20,17 @@ export function formatLongDate(value: string) {
   }).format(new Date(value));
 }
 
+/** e.g. APR 26, 2026 — matches compact author byline in post headers. */
+export function formatPostHeaderDate(value: string) {
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  })
+    .format(new Date(value))
+    .toUpperCase();
+}
+
 export function shimmer(width: number, height: number) {
   return `
     <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" fill="none" xmlns="http://www.w3.org/2000/svg">

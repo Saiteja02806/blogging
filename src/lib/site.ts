@@ -13,9 +13,9 @@ export const siteConfig = {
     "This blog is where I slow things down, explain what matters, and make the AI wave easier to follow.",
   ],
   author: {
-    name: "Teja",
+    name: "@Nano Banana",
     role: "Creator and writer",
-    image: "/Nano Banana - _WhatsApp Image 202_ _referece  _sai7 _sai6 _sai5 _sai4 _sai3 _sat2 _sai8 _sai9 So I w (1).png",
+    image: "/author-avatar.png",
   },
   navigation: [
     { href: "/", label: "Blog" },
