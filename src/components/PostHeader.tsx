@@ -48,7 +48,7 @@ export function PostHeader({
           ) : null}
           <div className="flex min-w-0 flex-col justify-center gap-0.5">
             {authorName ? (
-              <span className="font-ui text-[0.8125rem] font-bold uppercase leading-tight tracking-[0.1em] text-[var(--text-primary)]">
+              <span className="font-ui text-[0.8125rem] font-bold leading-tight tracking-normal text-[var(--text-primary)]">
                 {authorName}
               </span>
             ) : null}

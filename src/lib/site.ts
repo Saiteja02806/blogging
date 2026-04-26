@@ -13,7 +13,7 @@ export const siteConfig = {
     "This blog is where I slow things down, explain what matters, and make the AI wave easier to follow.",
   ],
   author: {
-    name: "@Nano Banana",
+    name: "Teja",
     role: "Creator and writer",
     image: "/author-avatar.png",
   },

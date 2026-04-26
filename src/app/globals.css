@@ -49,6 +49,11 @@ body {
 a {
   color: inherit;
   text-decoration: none;
+  text-decoration-skip-ink: auto;
+}
+
+a:visited {
+  color: inherit;
 }
 
 ::selection {

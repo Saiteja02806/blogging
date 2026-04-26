@@ -1,0 +1,10 @@
+---
+description: Do not volunteer recap/summary of changes unless the user asks
+alwaysApply: true
+---
+
+# Response style (strict)
+
+- In **any** conversation, **do not** (in the final message or earlier) list what you changed, name edited files, give a recap, changelog, "summary", or "here is what I did" **unless the user explicitly requests** that language (e.g. "what did you change?", "list files", "summarize the diff").
+- Do not treat a short "done" or "ok" as permission to add a full recap. Only answer the question, give the result, the next action, or one line of confirmation.
+- This applies to **every turn**, not only long tasks. Default: **zero** post-hoc work summaries.

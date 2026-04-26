@@ -1,6 +1,6 @@
-import Image from "next/image";
 import { PortableText, type PortableTextComponents } from "@portabletext/react";
 
+import { PostImageWithLightbox } from "@/components/PostImageWithLightbox";
 import { resolvePortableTextImageUrl } from "@/lib/image";
 import type { PortableTextValue } from "@/lib/types";
 
@@ -74,23 +74,24 @@ const components: PortableTextComponents = {
         return null;
       }
 
+      const alt = typeof value.alt === "string" ? value.alt : "";
+      const cap = typeof value.caption === "string" && value.caption ? value.caption : undefined;
+      const rawLayout = value.layout;
+      const layout =
+        rawLayout === "wide" || rawLayout === "full" || rawLayout === "normal" ? rawLayout : "normal";
+      const v = value as Record<string, unknown>;
+      const imageWidth = typeof v.imageWidth === "number" ? v.imageWidth : undefined;
+      const imageHeight = typeof v.imageHeight === "number" ? v.imageHeight : undefined;
+
       return (
-        <figure className="my-8 mx-auto max-w-[168px] overflow-hidden rounded-lg border border-[var(--border-light)]">
-          <div className="relative bg-[var(--bg-secondary)] p-2">
-            <Image
-              src={src}
-              alt={typeof value.alt === "string" ? value.alt : ""}
-              width={200}
-              height={360}
-              className="h-auto w-full object-contain rounded-md"
-            />
-          </div>
-          {typeof value.caption === "string" && value.caption ? (
-            <figcaption className="text-center font-ui text-xs text-[var(--text-tertiary)] mt-2 mb-2 px-4">
-              {value.caption}
-            </figcaption>
-          ) : null}
-        </figure>
+        <PostImageWithLightbox
+          src={src}
+          alt={alt}
+          caption={cap}
+          layout={layout}
+          width={imageWidth}
+          height={imageHeight}
+        />
       );
     },
     code: ({ value }) => (

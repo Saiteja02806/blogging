@@ -19,6 +19,33 @@ export const postImage = defineType({
       title: "Caption",
       type: "string",
     }),
+    defineField({
+      name: "layout",
+      title: "Image size",
+      description: "Normal = text width, Wide = up to 960px, Full = full browser width (hero-style).",
+      type: "string",
+      options: {
+        list: [
+          { title: "Normal (text width)", value: "normal" },
+          { title: "Wide (screenshots, mockups)", value: "wide" },
+          { title: "Full (edge to edge)", value: "full" },
+        ],
+        layout: "radio",
+        direction: "vertical",
+      },
+      initialValue: "normal",
+    }),
+    defineField({
+      name: "imageWidth",
+      title: "Display width (px)",
+      type: "number",
+      description: "Optional. Hint for layout (e.g. 260 for a half-width phone shot).",
+    }),
+    defineField({
+      name: "imageHeight",
+      title: "Display height (px)",
+      type: "number",
+    }),
   ],
 });
 

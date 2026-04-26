@@ -1,12 +1,11 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { PostActions } from "@/components/PostActions";
 import { PortableTextBody } from "@/components/PortableTextBody";
 import { PostHeader } from "@/components/PostHeader";
-import { getBlurDataURL, resolveImageUrl } from "@/lib/image";
+import { resolveImageUrl } from "@/lib/image";
 import { getAllPostSlugs, getPostBySlug } from "@/lib/sanity";
 import { siteConfig } from "@/lib/site";
 
@@ -63,14 +62,6 @@ export default async function BlogPostPage({
     notFound();
   }
 
-  const coverImage =
-    resolveImageUrl(post.coverImage, {
-      width: 1800,
-      height: 1012,
-      fit: "crop",
-      quality: 84,
-    }) ?? null;
-
   return (
     <main className="flex-1">
       <article>
@@ -94,23 +85,6 @@ export default async function BlogPostPage({
             authorImage={siteConfig.author.image}
           />
         </section>
-
-        {/* Cover Image — full bleed */}
-        {coverImage ? (
-          <div className="mx-auto max-w-[900px] px-6 mb-14">
-            <div className="relative aspect-video overflow-hidden rounded-2xl shadow-editorial">
-              <Image
-                src={coverImage}
-                alt={post.coverImageAlt || post.title}
-                fill
-                priority
-                className="object-cover"
-                placeholder="blur"
-                blurDataURL={getBlurDataURL()}
-              />
-            </div>
-          </div>
-        ) : null}
 
         {/* Post Body — reading column */}
         <div className="mx-auto max-w-[680px] px-6 pb-24">

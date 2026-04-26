@@ -13,6 +13,7 @@ import { Navbar } from "@/components/Navbar";
 import { siteConfig } from "@/lib/site";
 
 import "./globals.css";
+import "../styles/blog.css";
 
 const playfair = Playfair_Display({
   subsets: ["latin"],
@@ -74,7 +75,7 @@ export default function RootLayout({
       <body
         className={`${playfair.variable} ${sourceSerif.variable} ${dmSans.variable} ${jetbrainsMono.variable} min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)] antialiased font-ui`}
       >
-        <div className="flex min-h-screen flex-col">
+        <div className="flex min-h-screen flex-col overflow-x-clip">
           <Navbar />
           {children}
           <Footer />

@@ -1,6 +1,6 @@
 import type { TypedObject } from "@portabletext/types";
 
-export type BlogImage = string | Record<string, unknown> | null | undefined;
+export type ImageSource = string | Record<string, unknown> | null | undefined;
 
 export type PortableTextValue = TypedObject[];
 
@@ -14,7 +14,7 @@ export interface PostPreview {
   excerpt: string;
   readTime: number;
   category?: string;
-  coverImage?: BlogImage;
+  coverImage?: ImageSource;
   coverImageAlt?: string;
 }
 
