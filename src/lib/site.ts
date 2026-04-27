@@ -22,7 +22,7 @@ export const siteConfig = {
     { href: "/about", label: "About" },
   ],
   footerDescription:
-    "Teja Blog is a personal publication focused on SaaS growth, distribution, and the real decisions that turn side projects into profitable businesses.",
+    "Teja Blogs is a personal publication focused on SaaS growth, distribution, and the real decisions that turn side projects into profitable businesses.",
 } as const;
 
 export function getCategoryStyle() {
