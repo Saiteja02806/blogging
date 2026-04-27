@@ -3,6 +3,14 @@
 import { useCallback, useEffect, useState } from "react";
 import { Heart, MessageCircle } from "lucide-react";
 
+import { getOrCreateDeviceUserKey } from "@/lib/device-user";
+import {
+  appendLocalComment,
+  readLocalComments,
+  readLocalLikeCount,
+  writeLocalLikeCount,
+} from "@/lib/local-engagement";
+
 interface PostActionsProps {
   postSlug: string;
 }
@@ -23,36 +31,61 @@ export function PostActions({ postSlug }: PostActionsProps) {
   const [comments, setComments] = useState<CommentItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [backendUnavailable, setBackendUnavailable] = useState(false);
+  const [useLocalFallback, setUseLocalFallback] = useState(false);
+
+  const hydrateFromLocalStorage = useCallback(() => {
+    setLikeCount(readLocalLikeCount(postSlug));
+    const rows = readLocalComments(postSlug);
+    setComments(
+      rows.map((c) => ({
+        id: c.id,
+        name: c.name,
+        text: c.text,
+        time: new Date(c.createdAt).toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+        }),
+      })),
+    );
+  }, [postSlug]);
 
   const loadData = useCallback(async () => {
     if (!postSlug) {
       return;
     }
 
+    const userKey = getOrCreateDeviceUserKey();
+    if (!userKey) {
+      return;
+    }
+
     try {
       setError(null);
-      const qs = encodeURIComponent(postSlug);
+      const base = `/api/posts/${encodeURIComponent(postSlug)}`;
 
       const [likeRes, commentRes] = await Promise.all([
-        fetch(`/api/likes?postSlug=${qs}`, { cache: "no-store" }),
-        fetch(`/api/comments?postSlug=${qs}`, { cache: "no-store" }),
+        fetch(`${base}/like?userKey=${encodeURIComponent(userKey)}`, { cache: "no-store" }),
+        fetch(`${base}/comments`, { cache: "no-store" }),
       ]);
 
       if (likeRes.status === 503 || commentRes.status === 503) {
-        setBackendUnavailable(true);
+        setUseLocalFallback(true);
+        hydrateFromLocalStorage();
+        const storageKey = `liked-${postSlug}`;
+        setLiked(localStorage.getItem(storageKey) === "1");
         return;
       }
 
-      setBackendUnavailable(false);
+      setUseLocalFallback(false);
 
       if (!likeRes.ok) {
         const j = (await likeRes.json().catch(() => ({}))) as { error?: string };
         console.error("[likes API]", j);
         setError(j.error ?? "Could not load likes.");
       } else {
-        const j = (await likeRes.json()) as { count?: number };
+        const j = (await likeRes.json()) as { count?: number; likedByMe?: boolean };
         setLikeCount(typeof j.count === "number" ? j.count : 0);
+        setLiked(Boolean(j.likedByMe));
       }
 
       if (!commentRes.ok) {
@@ -61,14 +94,19 @@ export function PostActions({ postSlug }: PostActionsProps) {
         setError((prev) => prev ?? (j.error ?? "Could not load comments."));
       } else {
         const j = (await commentRes.json()) as {
-          comments?: Array<{ id?: string; name: string; text: string; created_at: string }>;
+          comments?: Array<{
+            id?: string;
+            author_name?: string | null;
+            body?: string;
+            created_at: string;
+          }>;
         };
         const rows = Array.isArray(j.comments) ? j.comments : [];
         setComments(
           rows.map((c) => ({
             id: c.id,
-            name: c.name,
-            text: c.text,
+            name: c.author_name?.trim() || "Anonymous",
+            text: c.body ?? "",
             time: new Date(c.created_at).toLocaleDateString("en-US", {
               month: "short",
               day: "numeric",
@@ -80,55 +118,77 @@ export function PostActions({ postSlug }: PostActionsProps) {
       console.error("[engagement] unexpected error:", err);
       setError("Failed to load engagement data.");
     }
-  }, [postSlug]);
+  }, [postSlug, hydrateFromLocalStorage]);
 
   useEffect(() => {
-    const storageKey = `liked-${postSlug}`;
-    const stored = localStorage.getItem(storageKey);
-    if (stored === "1") setLiked(true);
-
     loadData();
-  }, [postSlug, loadData]);
+  }, [loadData]);
 
   const handleLike = async () => {
-    if (!postSlug || backendUnavailable) return;
+    if (!postSlug) return;
+
+    const userKey = getOrCreateDeviceUserKey();
+    if (!userKey) return;
 
     const storageKey = `liked-${postSlug}`;
-    const currentlyLiked = liked;
-    const delta = currentlyLiked ? -1 : 1;
+    const prevLiked = liked;
+    const prevCount = likeCount;
 
-    setLiked(!currentlyLiked);
-    setLikeCount((c) => Math.max(0, c + delta));
-    localStorage.setItem(storageKey, currentlyLiked ? "" : "1");
+    setLiked(!prevLiked);
+    setLikeCount((c) => Math.max(0, c + (prevLiked ? -1 : 1)));
+    localStorage.setItem(storageKey, prevLiked ? "" : "1");
+
+    if (useLocalFallback) {
+      const delta = prevLiked ? -1 : 1;
+      const current = readLocalLikeCount(postSlug);
+      const newCount = Math.max(0, current + delta);
+      writeLocalLikeCount(postSlug, newCount);
+      setLikeCount(newCount);
+      setError(null);
+      return;
+    }
 
     try {
-      const res = await fetch("/api/likes", {
+      const base = `/api/posts/${encodeURIComponent(postSlug)}`;
+      const res = await fetch(`${base}/like`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ postSlug, delta }),
+        body: JSON.stringify({ userKey }),
       });
 
-      const j = (await res.json().catch(() => ({}))) as { error?: string; count?: number };
+      const j = (await res.json().catch(() => ({}))) as {
+        error?: string;
+        count?: number;
+        likedByMe?: boolean;
+      };
 
       if (!res.ok) {
+        if (res.status === 503) {
+          setUseLocalFallback(true);
+          hydrateFromLocalStorage();
+          setLiked(localStorage.getItem(storageKey) === "1");
+          setError(null);
+          return;
+        }
         console.error("[like POST]", j);
         setError(j.error ?? "Could not save like.");
-        setLiked(currentlyLiked);
-        setLikeCount((c) => Math.max(0, c - delta));
-        localStorage.setItem(storageKey, currentlyLiked ? "1" : "");
+        setLiked(prevLiked);
+        setLikeCount(prevCount);
+        localStorage.setItem(storageKey, prevLiked ? "1" : "");
         return;
       }
 
       if (typeof j.count === "number") {
         setLikeCount(j.count);
       }
-
+      setLiked(Boolean(j.likedByMe));
+      localStorage.setItem(storageKey, j.likedByMe ? "1" : "");
       setError(null);
     } catch (err) {
       console.error("[like] unexpected error:", err);
-      setLiked(currentlyLiked);
-      setLikeCount((c) => Math.max(0, c - delta));
-      localStorage.setItem(storageKey, currentlyLiked ? "1" : "");
+      setLiked(prevLiked);
+      setLikeCount(prevCount);
+      localStorage.setItem(storageKey, prevLiked ? "1" : "");
       setError("Could not save like.");
     }
   };
@@ -139,25 +199,45 @@ export function PostActions({ postSlug }: PostActionsProps) {
 
   const handleSubmitComment = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!postSlug || backendUnavailable) return;
+    if (!postSlug) return;
     if (!commentText.trim() || !commenterName.trim()) return;
 
     setLoading(true);
     setError(null);
 
-    const text = commentText.trim();
-    const name = commenterName.trim();
+    const comment = commentText.trim();
+    const authorName = commenterName.trim();
+    const userKey = getOrCreateDeviceUserKey();
+
+    if (useLocalFallback) {
+      appendLocalComment(postSlug, authorName, comment);
+      hydrateFromLocalStorage();
+      setCommentText("");
+      setCommenterName("");
+      setLoading(false);
+      return;
+    }
 
     try {
-      const res = await fetch("/api/comments", {
+      const base = `/api/posts/${encodeURIComponent(postSlug)}`;
+      const res = await fetch(`${base}/comments`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ postSlug, name, text }),
+        body: JSON.stringify({ userKey, authorName, comment }),
       });
 
       const j = (await res.json().catch(() => ({}))) as { error?: string };
 
       if (!res.ok) {
+        if (res.status === 503) {
+          setUseLocalFallback(true);
+          appendLocalComment(postSlug, authorName, comment);
+          hydrateFromLocalStorage();
+          setCommentText("");
+          setCommenterName("");
+          setLoading(false);
+          return;
+        }
         console.error("[comment POST]", j);
         setError(j.error ?? "Failed to post comment. Please try again.");
         setLoading(false);
@@ -179,42 +259,37 @@ export function PostActions({ postSlug }: PostActionsProps) {
     return null;
   }
 
-  if (backendUnavailable) {
-    return (
-      <div className="mt-12 border-t border-[var(--border-light)] pt-8">
-        <p className="font-ui text-sm leading-relaxed text-[var(--text-tertiary)]">
-          Likes and comments need Supabase credentials on the server. Set{" "}
-          <code className="rounded bg-[var(--bg-secondary)] px-1.5 py-0.5 font-mono text-[0.8rem]">
+  return (
+    <div className="mt-12 border-t border-[var(--border-light)] pt-8">
+      {useLocalFallback ? (
+        <p className="mb-4 rounded-xl border border-[var(--border-light)] bg-[var(--bg-secondary)] px-4 py-3 font-ui text-xs leading-relaxed text-[var(--text-tertiary)]">
+          <strong className="font-medium text-[var(--text-secondary)]">Device-only mode.</strong>{" "}
+          The API cannot reach Supabase (usually missing{" "}
+          <code className="rounded bg-[var(--bg-primary)] px-1 py-0.5 font-mono text-[0.7rem]">
+            SUPABASE_SERVICE_ROLE_KEY
+          </code>{" "}
+          on the server). Add{" "}
+          <code className="rounded bg-[var(--bg-primary)] px-1 py-0.5 font-mono text-[0.7rem]">
             SUPABASE_URL
           </code>{" "}
           and{" "}
-          <code className="rounded bg-[var(--bg-secondary)] px-1.5 py-0.5 font-mono text-[0.8rem]">
-            SUPABASE_ANON_KEY
+          <code className="rounded bg-[var(--bg-primary)] px-1 py-0.5 font-mono text-[0.7rem]">
+            SUPABASE_SERVICE_ROLE_KEY
           </code>{" "}
-          (or{" "}
-          <code className="rounded bg-[var(--bg-secondary)] px-1.5 py-0.5 font-mono text-[0.8rem]">
-            NEXT_PUBLIC_SUPABASE_URL
+          in{" "}
+          <code className="rounded bg-[var(--bg-primary)] px-1 py-0.5 font-mono text-[0.7rem]">
+            .env.local
           </code>{" "}
-          /{" "}
-          <code className="rounded bg-[var(--bg-secondary)] px-1.5 py-0.5 font-mono text-[0.8rem]">
-            NEXT_PUBLIC_SUPABASE_ANON_KEY
-          </code>
-          ) in your deployment environment, then redeploy.
+          (local) or Vercel → Environment Variables (production). Never commit secrets to Git.
         </p>
-      </div>
-    );
-  }
+      ) : null}
 
-  return (
-    <div className="mt-12 border-t border-[var(--border-light)] pt-8">
-      {/* Error Banner */}
       {error && (
         <div className="mb-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 font-ui text-sm text-red-400">
           {error}
         </div>
       )}
 
-      {/* Action Buttons */}
       <div className="flex items-center gap-4">
         <button
           type="button"
@@ -264,10 +339,8 @@ export function PostActions({ postSlug }: PostActionsProps) {
         </button>
       </div>
 
-      {/* Comments Section */}
       {showComments && (
         <div className="mt-6 space-y-5">
-          {/* Existing Comments */}
           {comments.length > 0 && (
             <div className="space-y-4">
               {comments.map((comment, i) => (
@@ -294,7 +367,6 @@ export function PostActions({ postSlug }: PostActionsProps) {
             </div>
           )}
 
-          {/* Comment Form */}
           <form onSubmit={handleSubmitComment} className="space-y-3">
             <input
               value={commenterName}
