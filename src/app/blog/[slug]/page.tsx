@@ -117,7 +117,7 @@ export default async function BlogPostPage({
           <PortableTextBody body={post.body} />
 
           {/* Like + Comment Actions */}
-          <PostActions />
+          <PostActions postSlug={params.slug} />
 
           {/* Bottom divider + back link */}
           <div className="mt-16 border-t border-[var(--border-light)] pt-8">

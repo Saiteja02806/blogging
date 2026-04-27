@@ -1,41 +1,114 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Heart, MessageCircle } from "lucide-react";
+import { supabase } from "@/lib/supabase";
 
-export function PostActions() {
+interface PostActionsProps {
+  postSlug: string;
+}
+
+export function PostActions({ postSlug }: PostActionsProps) {
   const [liked, setLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(0);
   const [showComments, setShowComments] = useState(false);
   const [commentText, setCommentText] = useState("");
+  const [commenterName, setCommenterName] = useState("");
   const [comments, setComments] = useState<{ name: string; text: string; time: string }[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  const handleLike = () => {
-    if (liked) {
-      setLiked(false);
-      setLikeCount((c) => c - 1);
-    } else {
-      setLiked(true);
-      setLikeCount((c) => c + 1);
+  useEffect(() => {
+    const storageKey = `liked-${postSlug}`;
+    const stored = localStorage.getItem(storageKey);
+    if (stored === "1") setLiked(true);
+
+    async function fetchData() {
+      const { data: likeData } = await supabase
+        .from("likes")
+        .select("count")
+        .eq("post_slug", postSlug)
+        .single();
+      if (likeData) setLikeCount(likeData.count);
+
+      const { data: commentData } = await supabase
+        .from("comments")
+        .select("name, text, created_at")
+        .eq("post_slug", postSlug)
+        .order("created_at", { ascending: true });
+      if (commentData) {
+        setComments(
+          commentData.map((c) => ({
+            name: c.name,
+            text: c.text,
+            time: new Date(c.created_at).toLocaleDateString("en-US", {
+              month: "short",
+              day: "numeric",
+            }),
+          })),
+        );
+      }
     }
+
+    fetchData();
+  }, [postSlug]);
+
+  const handleLike = async () => {
+    const storageKey = `liked-${postSlug}`;
+    const currentlyLiked = liked;
+    const delta = currentlyLiked ? -1 : 1;
+
+    setLiked(!currentlyLiked);
+    setLikeCount((c) => Math.max(0, c + delta));
+    localStorage.setItem(storageKey, currentlyLiked ? "" : "1");
+
+    const { data } = await supabase
+      .from("likes")
+      .select("count")
+      .eq("post_slug", postSlug)
+      .single();
+
+    const currentCount = data?.count ?? 0;
+    const newCount = Math.max(0, currentCount + delta);
+
+    await supabase.from("likes").upsert(
+      { post_slug: postSlug, count: newCount, updated_at: new Date().toISOString() },
+      { onConflict: "post_slug" },
+    );
   };
 
   const handleComment = () => {
     setShowComments(!showComments);
   };
 
-  const handleSubmitComment = (e: React.FormEvent) => {
+  const handleSubmitComment = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!commentText.trim()) return;
-    setComments((prev) => [
-      ...prev,
-      {
-        name: "Reader",
-        text: commentText.trim(),
-        time: "Just now",
-      },
-    ]);
-    setCommentText("");
+    if (!commentText.trim() || !commenterName.trim()) return;
+
+    setLoading(true);
+    const text = commentText.trim();
+    const name = commenterName.trim();
+
+    const { error } = await supabase.from("comments").insert({
+      post_slug: postSlug,
+      name,
+      text,
+    });
+
+    setLoading(false);
+    if (!error) {
+      setComments((prev) => [
+        ...prev,
+        {
+          name,
+          text,
+          time: new Date().toLocaleDateString("en-US", {
+            month: "short",
+            day: "numeric",
+          }),
+        },
+      ]);
+      setCommentText("");
+    }
   };
 
   return (
@@ -120,6 +193,12 @@ export function PostActions() {
 
           {/* Comment Form */}
           <form onSubmit={handleSubmitComment} className="space-y-3">
+            <input
+              value={commenterName}
+              onChange={(e) => setCommenterName(e.target.value)}
+              placeholder="Your name"
+              className="w-full rounded-xl border border-[var(--border-light)] bg-[var(--bg-secondary)] px-4 py-3 font-ui text-[0.9375rem] leading-[1.6] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] transition-colors focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
+            />
             <textarea
               value={commentText}
               onChange={(e) => setCommentText(e.target.value)}
@@ -130,10 +209,10 @@ export function PostActions() {
             <div className="flex justify-end">
               <button
                 type="submit"
-                disabled={!commentText.trim()}
+                disabled={!commentText.trim() || !commenterName.trim() || loading}
                 className="rounded-full bg-[var(--accent)] px-5 py-2 font-ui text-sm font-semibold text-[var(--accent-foreground)] transition-all duration-200 hover:bg-[var(--accent-hover)] disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                Post Comment
+                {loading ? "Posting..." : "Post Comment"}
               </button>
             </div>
           </form>
