@@ -1,16 +1,16 @@
 export const siteConfig = {
   name: "Teja Blog",
   domain: "tejablog.online",
-  eyebrow: "AI Blog",
-  title: "Tracking how AI is changing work, products, and the web.",
+  eyebrow: "SaaS Blog",
+  title: "Building SaaS that people actually pay for.",
   description:
-    "Simple, grounded writing on AI tools, agents, workflows, and the transition happening around us.",
+    "Practical insights on building successful SaaS products. What actually matters, why coding alone isn't enough, and the distribution, positioning, and user obsession that separates products that scale from ones that disappear.",
   intro:
-    "I am here too, sharing my insights on the AI world and how the AI world is transitioning.",
+    "Building a SaaS that people actually pay for is harder than writing code. I am here to share what actually works.",
   about: [
-    "I am here too, sharing my insights on the AI world and how the AI world is transitioning.",
-    "I write in simple words about AI tools, agent workflows, product shifts, and what those changes mean in real work.",
-    "This blog is where I slow things down, explain what matters, and make the AI wave easier to follow.",
+    "Building a SaaS that people actually pay for is harder than writing code. I am here to share what actually works.",
+    "I write about distribution, positioning, onboarding, pricing, and the real-world decisions that turn a side project into a real business.",
+    "This blog is where I break down why building alone is never enough, and what separates SaaS products that scale from the ones that never get a single paying user.",
   ],
   author: {
     name: "Teja",
@@ -22,7 +22,7 @@ export const siteConfig = {
     { href: "/about", label: "About" },
   ],
   footerDescription:
-    "Teja Blog is a personal AI publication focused on practical insights, agent systems, and the transition shaping the next phase of digital work.",
+    "Teja Blog is a personal publication focused on SaaS growth, distribution, and the real decisions that turn side projects into profitable businesses.",
 } as const;
 
 export function getCategoryStyle() {
