@@ -1,11 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Heart, MessageCircle } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 
 interface PostActionsProps {
   postSlug: string;
+}
+
+interface CommentItem {
+  name: string;
+  text: string;
+  time: string;
 }
 
 export function PostActions({ postSlug }: PostActionsProps) {
@@ -14,30 +20,39 @@ export function PostActions({ postSlug }: PostActionsProps) {
   const [showComments, setShowComments] = useState(false);
   const [commentText, setCommentText] = useState("");
   const [commenterName, setCommenterName] = useState("");
-  const [comments, setComments] = useState<{ name: string; text: string; time: string }[]>([]);
+  const [comments, setComments] = useState<CommentItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const storageKey = `liked-${postSlug}`;
-    const stored = localStorage.getItem(storageKey);
-    if (stored === "1") setLiked(true);
+  const loadData = useCallback(async () => {
+    try {
+      setError(null);
 
-    async function fetchData() {
-      const { data: likeData } = await supabase
+      // Load likes
+      const { data: likeRows, error: likeErr } = await supabase
         .from("likes")
         .select("count")
         .eq("post_slug", postSlug)
-        .single();
-      if (likeData) setLikeCount(likeData.count);
+        .maybeSingle();
 
-      const { data: commentData } = await supabase
+      if (likeErr) {
+        console.error("[Supabase] likes fetch error:", likeErr.message);
+      } else if (likeRows) {
+        setLikeCount(likeRows.count ?? 0);
+      }
+
+      // Load comments
+      const { data: commentRows, error: commentErr } = await supabase
         .from("comments")
         .select("name, text, created_at")
         .eq("post_slug", postSlug)
         .order("created_at", { ascending: true });
-      if (commentData) {
+
+      if (commentErr) {
+        console.error("[Supabase] comments fetch error:", commentErr.message);
+      } else if (commentRows) {
         setComments(
-          commentData.map((c) => ({
+          commentRows.map((c) => ({
             name: c.name,
             text: c.text,
             time: new Date(c.created_at).toLocaleDateString("en-US", {
@@ -47,10 +62,19 @@ export function PostActions({ postSlug }: PostActionsProps) {
           })),
         );
       }
+    } catch (err) {
+      console.error("[Supabase] unexpected error:", err);
+      setError("Failed to load engagement data.");
     }
-
-    fetchData();
   }, [postSlug]);
+
+  useEffect(() => {
+    const storageKey = `liked-${postSlug}`;
+    const stored = localStorage.getItem(storageKey);
+    if (stored === "1") setLiked(true);
+
+    loadData();
+  }, [postSlug, loadData]);
 
   const handleLike = async () => {
     const storageKey = `liked-${postSlug}`;
@@ -61,19 +85,39 @@ export function PostActions({ postSlug }: PostActionsProps) {
     setLikeCount((c) => Math.max(0, c + delta));
     localStorage.setItem(storageKey, currentlyLiked ? "" : "1");
 
-    const { data } = await supabase
-      .from("likes")
-      .select("count")
-      .eq("post_slug", postSlug)
-      .single();
+    try {
+      // Read current count from DB to stay accurate
+      const { data: row } = await supabase
+        .from("likes")
+        .select("count")
+        .eq("post_slug", postSlug)
+        .maybeSingle();
 
-    const currentCount = data?.count ?? 0;
-    const newCount = Math.max(0, currentCount + delta);
+      const currentCount = row?.count ?? 0;
+      const newCount = Math.max(0, currentCount + delta);
 
-    await supabase.from("likes").upsert(
-      { post_slug: postSlug, count: newCount, updated_at: new Date().toISOString() },
-      { onConflict: "post_slug" },
-    );
+      const { error: upsertErr } = await supabase.from("likes").upsert(
+        {
+          post_slug: postSlug,
+          count: newCount,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "post_slug" },
+      );
+
+      if (upsertErr) {
+        console.error("[Supabase] like upsert error:", upsertErr.message);
+        // Revert optimistic update
+        setLiked(currentlyLiked);
+        setLikeCount((c) => Math.max(0, c - delta));
+        localStorage.setItem(storageKey, currentlyLiked ? "1" : "");
+      }
+    } catch (err) {
+      console.error("[Supabase] like unexpected error:", err);
+      setLiked(currentlyLiked);
+      setLikeCount((c) => Math.max(0, c - delta));
+      localStorage.setItem(storageKey, currentlyLiked ? "1" : "");
+    }
   };
 
   const handleComment = () => {
@@ -85,34 +129,46 @@ export function PostActions({ postSlug }: PostActionsProps) {
     if (!commentText.trim() || !commenterName.trim()) return;
 
     setLoading(true);
+    setError(null);
+
     const text = commentText.trim();
     const name = commenterName.trim();
 
-    const { error } = await supabase.from("comments").insert({
-      post_slug: postSlug,
-      name,
-      text,
-    });
+    try {
+      const { error: insertErr } = await supabase.from("comments").insert({
+        post_slug: postSlug,
+        name,
+        text,
+      });
 
-    setLoading(false);
-    if (!error) {
-      setComments((prev) => [
-        ...prev,
-        {
-          name,
-          text,
-          time: new Date().toLocaleDateString("en-US", {
-            month: "short",
-            day: "numeric",
-          }),
-        },
-      ]);
+      if (insertErr) {
+        console.error("[Supabase] comment insert error:", insertErr.message);
+        setError("Failed to post comment. Please try again.");
+        setLoading(false);
+        return;
+      }
+
+      // Reload comments from DB to confirm persistence
+      await loadData();
       setCommentText("");
+      setCommenterName("");
+      setLoading(false);
+    } catch (err) {
+      console.error("[Supabase] comment unexpected error:", err);
+      setError("Failed to post comment.");
+      setLoading(false);
     }
   };
 
   return (
     <div className="mt-12 border-t border-[var(--border-light)] pt-8">
+      {/* Error Banner */}
+      {error && (
+        <div className="mb-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 font-ui text-sm text-red-400">
+          {error}
+        </div>
+      )}
+
       {/* Action Buttons */}
       <div className="flex items-center gap-4">
         <button
