@@ -1,16 +1,16 @@
 export const siteConfig = {
-  name: "Teja Blogs",
+  name: "Teja Blog",
   domain: "tejablog.online",
-  eyebrow: "Blogs",
-  title: "Building SaaS that people actually pay for.",
+  eyebrow: "AI Blog",
+  title: "Tracking how AI is changing work, products, and the web.",
   description:
-    "Successful SaaS products are not just code. They obsess over user onboarding, distribution, micro-copy, and positioning.",
+    "Simple, grounded writing on AI tools, agents, workflows, and the transition happening around us.",
   intro:
-    "Building a SaaS that people actually pay for is harder than writing code. I share what actually works — based on real teardowns, not theory.",
+    "I am here too, sharing my insights on the AI world and how the AI world is transitioning.",
   about: [
-    "Building a SaaS that people actually pay for is harder than writing code. I share what actually works — based on real teardowns, not theory.",
-    "I write about distribution, positioning, onboarding, pricing, and the real-world decisions that turn a side project into a real business.",
-    "This blog is where I break down why building alone is never enough, and what separates SaaS products that scale from the ones that never get a single paying user.",
+    "I am here too, sharing my insights on the AI world and how the AI world is transitioning.",
+    "I write in simple words about AI tools, agent workflows, product shifts, and what those changes mean in real work.",
+    "This blog is where I slow things down, explain what matters, and make the AI wave easier to follow.",
   ],
   author: {
     name: "Teja",
@@ -22,7 +22,7 @@ export const siteConfig = {
     { href: "/about", label: "About" },
   ],
   footerDescription:
-    "Teja Blogs is a personal publication focused on SaaS growth, distribution, and the real decisions that turn side projects into profitable businesses.",
+    "Teja Blog is a personal AI publication focused on practical insights, agent systems, and the transition shaping the next phase of digital work.",
 } as const;
 
 export function getCategoryStyle() {

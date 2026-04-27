@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { Heart, MessageCircle } from "lucide-react";
-import { supabase } from "@/lib/supabase";
+import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 
 interface PostActionsProps {
   postSlug: string;
@@ -25,6 +25,10 @@ export function PostActions({ postSlug }: PostActionsProps) {
   const [error, setError] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
+    if (!isSupabaseConfigured || !postSlug) {
+      return;
+    }
+
     try {
       setError(null);
 
@@ -77,6 +81,8 @@ export function PostActions({ postSlug }: PostActionsProps) {
   }, [postSlug, loadData]);
 
   const handleLike = async () => {
+    if (!isSupabaseConfigured || !postSlug) return;
+
     const storageKey = `liked-${postSlug}`;
     const currentlyLiked = liked;
     const delta = currentlyLiked ? -1 : 1;
@@ -126,6 +132,7 @@ export function PostActions({ postSlug }: PostActionsProps) {
 
   const handleSubmitComment = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isSupabaseConfigured || !postSlug) return;
     if (!commentText.trim() || !commenterName.trim()) return;
 
     setLoading(true);
@@ -159,6 +166,36 @@ export function PostActions({ postSlug }: PostActionsProps) {
       setLoading(false);
     }
   };
+
+  if (!postSlug) {
+    return null;
+  }
+
+  if (!isSupabaseConfigured) {
+    return (
+      <div className="mt-12 border-t border-[var(--border-light)] pt-8">
+        <p className="font-ui text-sm leading-relaxed text-[var(--text-tertiary)]">
+          Likes and comments need a database. Add{" "}
+          <code className="rounded bg-[var(--bg-secondary)] px-1.5 py-0.5 font-mono text-[0.8rem]">
+            NEXT_PUBLIC_SUPABASE_URL
+          </code>{" "}
+          and{" "}
+          <code className="rounded bg-[var(--bg-secondary)] px-1.5 py-0.5 font-mono text-[0.8rem]">
+            NEXT_PUBLIC_SUPABASE_ANON_KEY
+          </code>{" "}
+          to your environment, create the{" "}
+          <code className="rounded bg-[var(--bg-secondary)] px-1.5 py-0.5 font-mono text-[0.8rem]">
+            likes
+          </code>{" "}
+          and{" "}
+          <code className="rounded bg-[var(--bg-secondary)] px-1.5 py-0.5 font-mono text-[0.8rem]">
+            comments
+          </code>{" "}
+          tables in Supabase, then redeploy.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="mt-12 border-t border-[var(--border-light)] pt-8">

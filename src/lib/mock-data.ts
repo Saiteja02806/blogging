@@ -73,10 +73,11 @@ const mockPostsInternal: BlogPost[] = [
     coverImageAlt: "4-step conversion cycle: Signup, Setup, Aha Moment, Habit",
     body: [
       paragraph(
-        "Spent the last 3 weeks studying onboarding flows of the top 10 consumer apps. Not as a user. As a builder trying to steal every trick they use.",
+        "Spent the last 3 weeks studying onboarding flows of the top 10 consumer apps.
+        Not as a user. As a builder trying to steal every trick they use.",
       ),
       paragraph(
-        "Every app that makes free users convert to paying users— not just acquires, but actually they follow the same cycle.",
+        "Every app that converts — not just acquires, but actually converts — follows the same cycle.",
       ),
       paragraph(
         "Signup → Setup → Aha Moment → Habit.",
