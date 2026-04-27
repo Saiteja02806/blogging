@@ -1,14 +1,14 @@
 export const siteConfig = {
-  name: "Teja Blog",
+  name: "Teja Blogs",
   domain: "tejablog.online",
-  eyebrow: "SaaS Blog",
+  eyebrow: "Blogs",
   title: "Building SaaS that people actually pay for.",
   description:
-    "Practical insights on building successful SaaS products. What actually matters, why coding alone isn't enough, and the distribution, positioning, and user obsession that separates products that scale from ones that disappear.",
+    "Successful SaaS products are not just code. They obsess over user onboarding, distribution, micro-copy, and positioning.",
   intro:
-    "Building a SaaS that people actually pay for is harder than writing code. I am here to share what actually works.",
+    "Building a SaaS that people actually pay for is harder than writing code. I share what actually works — based on real teardowns, not theory.",
   about: [
-    "Building a SaaS that people actually pay for is harder than writing code. I am here to share what actually works.",
+    "Building a SaaS that people actually pay for is harder than writing code. I share what actually works — based on real teardowns, not theory.",
     "I write about distribution, positioning, onboarding, pricing, and the real-world decisions that turn a side project into a real business.",
     "This blog is where I break down why building alone is never enough, and what separates SaaS products that scale from the ones that never get a single paying user.",
   ],
