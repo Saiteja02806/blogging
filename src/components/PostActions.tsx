@@ -2,13 +2,13 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { Heart, MessageCircle } from "lucide-react";
-import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 
 interface PostActionsProps {
   postSlug: string;
 }
 
 interface CommentItem {
+  id?: string;
   name: string;
   text: string;
   time: string;
@@ -23,40 +23,50 @@ export function PostActions({ postSlug }: PostActionsProps) {
   const [comments, setComments] = useState<CommentItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [backendUnavailable, setBackendUnavailable] = useState(false);
 
   const loadData = useCallback(async () => {
-    if (!isSupabaseConfigured || !postSlug) {
+    if (!postSlug) {
       return;
     }
 
     try {
       setError(null);
+      const qs = encodeURIComponent(postSlug);
 
-      // Load likes
-      const { data: likeRows, error: likeErr } = await supabase
-        .from("likes")
-        .select("count")
-        .eq("post_slug", postSlug)
-        .maybeSingle();
+      const [likeRes, commentRes] = await Promise.all([
+        fetch(`/api/likes?postSlug=${qs}`, { cache: "no-store" }),
+        fetch(`/api/comments?postSlug=${qs}`, { cache: "no-store" }),
+      ]);
 
-      if (likeErr) {
-        console.error("[Supabase] likes fetch error:", likeErr.message);
-      } else if (likeRows) {
-        setLikeCount(likeRows.count ?? 0);
+      if (likeRes.status === 503 || commentRes.status === 503) {
+        setBackendUnavailable(true);
+        return;
       }
 
-      // Load comments
-      const { data: commentRows, error: commentErr } = await supabase
-        .from("comments")
-        .select("name, text, created_at")
-        .eq("post_slug", postSlug)
-        .order("created_at", { ascending: true });
+      setBackendUnavailable(false);
 
-      if (commentErr) {
-        console.error("[Supabase] comments fetch error:", commentErr.message);
-      } else if (commentRows) {
+      if (!likeRes.ok) {
+        const j = (await likeRes.json().catch(() => ({}))) as { error?: string };
+        console.error("[likes API]", j);
+        setError(j.error ?? "Could not load likes.");
+      } else {
+        const j = (await likeRes.json()) as { count?: number };
+        setLikeCount(typeof j.count === "number" ? j.count : 0);
+      }
+
+      if (!commentRes.ok) {
+        const j = (await commentRes.json().catch(() => ({}))) as { error?: string };
+        console.error("[comments API]", j);
+        setError((prev) => prev ?? (j.error ?? "Could not load comments."));
+      } else {
+        const j = (await commentRes.json()) as {
+          comments?: Array<{ id?: string; name: string; text: string; created_at: string }>;
+        };
+        const rows = Array.isArray(j.comments) ? j.comments : [];
         setComments(
-          commentRows.map((c) => ({
+          rows.map((c) => ({
+            id: c.id,
             name: c.name,
             text: c.text,
             time: new Date(c.created_at).toLocaleDateString("en-US", {
@@ -67,7 +77,7 @@ export function PostActions({ postSlug }: PostActionsProps) {
         );
       }
     } catch (err) {
-      console.error("[Supabase] unexpected error:", err);
+      console.error("[engagement] unexpected error:", err);
       setError("Failed to load engagement data.");
     }
   }, [postSlug]);
@@ -81,7 +91,7 @@ export function PostActions({ postSlug }: PostActionsProps) {
   }, [postSlug, loadData]);
 
   const handleLike = async () => {
-    if (!isSupabaseConfigured || !postSlug) return;
+    if (!postSlug || backendUnavailable) return;
 
     const storageKey = `liked-${postSlug}`;
     const currentlyLiked = liked;
@@ -92,37 +102,34 @@ export function PostActions({ postSlug }: PostActionsProps) {
     localStorage.setItem(storageKey, currentlyLiked ? "" : "1");
 
     try {
-      // Read current count from DB to stay accurate
-      const { data: row } = await supabase
-        .from("likes")
-        .select("count")
-        .eq("post_slug", postSlug)
-        .maybeSingle();
+      const res = await fetch("/api/likes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ postSlug, delta }),
+      });
 
-      const currentCount = row?.count ?? 0;
-      const newCount = Math.max(0, currentCount + delta);
+      const j = (await res.json().catch(() => ({}))) as { error?: string; count?: number };
 
-      const { error: upsertErr } = await supabase.from("likes").upsert(
-        {
-          post_slug: postSlug,
-          count: newCount,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: "post_slug" },
-      );
-
-      if (upsertErr) {
-        console.error("[Supabase] like upsert error:", upsertErr.message);
-        // Revert optimistic update
+      if (!res.ok) {
+        console.error("[like POST]", j);
+        setError(j.error ?? "Could not save like.");
         setLiked(currentlyLiked);
         setLikeCount((c) => Math.max(0, c - delta));
         localStorage.setItem(storageKey, currentlyLiked ? "1" : "");
+        return;
       }
+
+      if (typeof j.count === "number") {
+        setLikeCount(j.count);
+      }
+
+      setError(null);
     } catch (err) {
-      console.error("[Supabase] like unexpected error:", err);
+      console.error("[like] unexpected error:", err);
       setLiked(currentlyLiked);
       setLikeCount((c) => Math.max(0, c - delta));
       localStorage.setItem(storageKey, currentlyLiked ? "1" : "");
+      setError("Could not save like.");
     }
   };
 
@@ -132,7 +139,7 @@ export function PostActions({ postSlug }: PostActionsProps) {
 
   const handleSubmitComment = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isSupabaseConfigured || !postSlug) return;
+    if (!postSlug || backendUnavailable) return;
     if (!commentText.trim() || !commenterName.trim()) return;
 
     setLoading(true);
@@ -142,26 +149,27 @@ export function PostActions({ postSlug }: PostActionsProps) {
     const name = commenterName.trim();
 
     try {
-      const { error: insertErr } = await supabase.from("comments").insert({
-        post_slug: postSlug,
-        name,
-        text,
+      const res = await fetch("/api/comments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ postSlug, name, text }),
       });
 
-      if (insertErr) {
-        console.error("[Supabase] comment insert error:", insertErr.message);
-        setError("Failed to post comment. Please try again.");
+      const j = (await res.json().catch(() => ({}))) as { error?: string };
+
+      if (!res.ok) {
+        console.error("[comment POST]", j);
+        setError(j.error ?? "Failed to post comment. Please try again.");
         setLoading(false);
         return;
       }
 
-      // Reload comments from DB to confirm persistence
       await loadData();
       setCommentText("");
       setCommenterName("");
       setLoading(false);
     } catch (err) {
-      console.error("[Supabase] comment unexpected error:", err);
+      console.error("[comment] unexpected error:", err);
       setError("Failed to post comment.");
       setLoading(false);
     }
@@ -171,27 +179,27 @@ export function PostActions({ postSlug }: PostActionsProps) {
     return null;
   }
 
-  if (!isSupabaseConfigured) {
+  if (backendUnavailable) {
     return (
       <div className="mt-12 border-t border-[var(--border-light)] pt-8">
         <p className="font-ui text-sm leading-relaxed text-[var(--text-tertiary)]">
-          Likes and comments need a database. Add{" "}
+          Likes and comments need Supabase credentials on the server. Set{" "}
+          <code className="rounded bg-[var(--bg-secondary)] px-1.5 py-0.5 font-mono text-[0.8rem]">
+            SUPABASE_URL
+          </code>{" "}
+          and{" "}
+          <code className="rounded bg-[var(--bg-secondary)] px-1.5 py-0.5 font-mono text-[0.8rem]">
+            SUPABASE_ANON_KEY
+          </code>{" "}
+          (or{" "}
           <code className="rounded bg-[var(--bg-secondary)] px-1.5 py-0.5 font-mono text-[0.8rem]">
             NEXT_PUBLIC_SUPABASE_URL
           </code>{" "}
-          and{" "}
+          /{" "}
           <code className="rounded bg-[var(--bg-secondary)] px-1.5 py-0.5 font-mono text-[0.8rem]">
             NEXT_PUBLIC_SUPABASE_ANON_KEY
-          </code>{" "}
-          to your environment, create the{" "}
-          <code className="rounded bg-[var(--bg-secondary)] px-1.5 py-0.5 font-mono text-[0.8rem]">
-            likes
-          </code>{" "}
-          and{" "}
-          <code className="rounded bg-[var(--bg-secondary)] px-1.5 py-0.5 font-mono text-[0.8rem]">
-            comments
-          </code>{" "}
-          tables in Supabase, then redeploy.
+          </code>
+          ) in your deployment environment, then redeploy.
         </p>
       </div>
     );
@@ -209,6 +217,7 @@ export function PostActions({ postSlug }: PostActionsProps) {
       {/* Action Buttons */}
       <div className="flex items-center gap-4">
         <button
+          type="button"
           onClick={handleLike}
           className="inline-flex items-center gap-2 rounded-full border border-[var(--border-light)] px-4 py-2 font-ui text-sm transition-all duration-200 hover:border-[var(--border-medium)]"
           style={{
@@ -234,6 +243,7 @@ export function PostActions({ postSlug }: PostActionsProps) {
         </button>
 
         <button
+          type="button"
           onClick={handleComment}
           className="inline-flex items-center gap-2 rounded-full border border-[var(--border-light)] px-4 py-2 font-ui text-sm text-[var(--text-secondary)] transition-all duration-200 hover:border-[var(--border-medium)] hover:text-[var(--text-primary)]"
           style={{
@@ -262,7 +272,7 @@ export function PostActions({ postSlug }: PostActionsProps) {
             <div className="space-y-4">
               {comments.map((comment, i) => (
                 <div
-                  key={i}
+                  key={comment.id ?? `${comment.name}-${i}`}
                   className="rounded-xl border border-[var(--border-light)] bg-[var(--bg-secondary)] p-4"
                 >
                   <div className="flex items-center gap-2 mb-2">
